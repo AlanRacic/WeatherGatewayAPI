@@ -1,11 +1,22 @@
 # WeatherGatewayAPI — ASP.NET Core Web API with External Service Integration (.NET 10)
 
+## Live Demo
+
+Azure App Service (Swagger / OpenAPI):
+
+https://weathergatewayapi-a8hqgeavazg6a5c3.italynorth-01.azurewebsites.net/swagger
+
+---
+
 ## Overview
+
 WeatherGatewayAPI is an ASP.NET Core Web API that acts as a gateway to an external weather service, demonstrating secure API design, external service integration, and production-oriented backend patterns.
 
 The project implements JWT-based authentication, structured logging, DTO-based data transformation, and global exception handling. It showcases how a backend service receives client requests, communicates with an external API, and returns structured, reliable responses.
 
-The architecture emphasizes clean separation of concerns, predictable error handling, and maintainable service orchestration aligned with modern .NET backend practices.
+The architecture emphasizes clean separation of concerns, predictable error handling, maintainable service orchestration, and cloud-oriented deployment practices aligned with modern .NET backend development.
+
+The application is deployed to Microsoft Azure App Service and integrated with a GitHub Actions CI/CD workflow for automated build and deployment.
 
 ---
 
@@ -23,6 +34,9 @@ JWT Authentication · Authorization
 **Architecture & Practices**  
 Dependency Injection · Middleware · Logging · Options Pattern · Async/Await
 
+**Cloud & Deployment**  
+Azure App Service · GitHub Actions · CI/CD · Swagger / OpenAPI
+
 ---
 
 ## Key Features
@@ -35,6 +49,8 @@ Dependency Injection · Middleware · Logging · Options Pattern · Async/Await
 - Global exception handling via custom middleware with consistent JSON responses
 - Input validation with clear error messaging for predictable API behavior
 - Separation of concerns between controllers, services, and data contracts
+- Live deployment to Azure App Service with public Swagger endpoint
+- Automated CI/CD workflow using GitHub Actions for build and deployment
 
 ---
 
@@ -46,6 +62,7 @@ Dependency Injection · Middleware · Logging · Options Pattern · Async/Await
 - Options pattern is used for strongly typed configuration (API settings, timeouts, keys)
 - Middleware centralizes exception handling and standardizes error responses
 - HttpClient is configured via dependency injection for reliability and reuse
+- Deployment pipeline is integrated with GitHub Actions and Azure App Service for automated cloud deployment
 
 This project reflects a gateway-style architecture, where the API acts as an intermediary between clients and external services.
 
@@ -59,35 +76,59 @@ This project reflects a gateway-style architecture, where the API acts as an int
 - Applying DTO mapping to decouple external and internal data models
 - Implementing structured logging for observability and debugging
 - Using dependency injection and options pattern for clean configuration management
+- Deploying ASP.NET Core Web APIs to Azure App Service
+- Implementing a CI/CD workflow with GitHub Actions
+- Understanding cloud-oriented backend deployment workflows
 
 ---
 
 ## How to Run (Local Setup)
 
 ### Prerequisites
+
 - .NET SDK 10
-- (Optional) Visual Studio 2022 or Rider
+- Optional: Visual Studio 2022 or Rider
 
 ### Steps
 
-Clone the repository
+Clone the repository:
 
 ```bash
 git clone https://github.com/alanracic/WeatherGatewayAPI.git
 ```
 
-Update configuration in `appsettings.json`
+Update configuration in `appsettings.json`:
+
 - Set external API base URL
 - Provide a valid API key
 - Configure JWT settings if needed
 
-Run the application
+Run the application:
 
 ```bash
 dotnet run
 ```
 
-Use Swagger / OpenAPI to test endpoints (in development environment)
+Use Swagger / OpenAPI to test endpoints in the local development environment.
+
+---
+
+## Cloud Deployment
+
+The application is deployed to Azure App Service and publicly accessible through Swagger / OpenAPI.
+
+### Live Endpoint
+
+```text
+https://weathergatewayapi-a8hqgeavazg6a5c3.italynorth-01.azurewebsites.net/swagger
+```
+
+### Deployment Workflow
+
+- Source control managed with GitHub
+- Automated build and deployment using GitHub Actions
+- Deployment target: Azure App Service
+- Public Swagger endpoint enabled for API testing and documentation
 
 ---
 
@@ -103,10 +144,10 @@ Use Swagger / OpenAPI to test endpoints (in development environment)
 
 ## Skills Demonstrated
 
-ASP.NET Core Web API · C# · .NET 10 · JWT Authentication · HttpClient · External API Integration · DTO Mapping · Middleware · Logging · Dependency Injection · Options Pattern · Async/Await
+ASP.NET Core Web API · C# · .NET 10 · JWT Authentication · HttpClient · External API Integration · DTO Mapping · Middleware · Logging · Dependency Injection · Options Pattern · Async/Await · Azure App Service · GitHub Actions · CI/CD · Swagger / OpenAPI
 
 ---
 
 ## Project Status
 
-Actively maintained as part of a professional .NET portfolio, demonstrating external service integration, secure API design, and clean backend architecture patterns suitable for real-world applications.
+Actively maintained as part of a professional .NET portfolio, demonstrating external service integration, secure API design, cloud deployment workflows, and clean backend architecture patterns aligned with modern ASP.NET Core development practices.
