@@ -1,153 +1,312 @@
-# WeatherGatewayAPI — ASP.NET Core Web API with External Service Integration (.NET 10)
+# WeatherGatewayAPI
 
-## Live Cloud Demo
+### ASP.NET Core integration API with typed HttpClient, JWT authorization, structured error handling, and Azure deployment
 
-Azure Cloud App Service (Swagger / OpenAPI):
+WeatherGatewayAPI is a **.NET 10 / ASP.NET Core Web API** that acts as a gateway between API clients and an external weather service.
 
-https://weathergatewayapi-a8hqgeavazg6a5c3.italynorth-01.azurewebsites.net/swagger
+The application validates incoming requests, communicates with the external provider through a typed `HttpClient`, maps provider responses into internal DTOs, and exposes a controlled API contract to clients.
 
----
-
-## Overview
-
-WeatherGatewayAPI is an ASP.NET Core Web API that acts as a gateway to an external weather service, demonstrating secure API design, external service integration, and production-oriented backend patterns.
-
-The project implements JWT-based authentication, structured logging, DTO-based data transformation, and global exception handling. It showcases how a backend service receives client requests, communicates with an external API, and returns structured, reliable responses.
-
-The architecture emphasizes clean separation of concerns, predictable error handling, maintainable service orchestration, and cloud-oriented deployment practices aligned with modern .NET backend development.
-
-The application is deployed to Microsoft Azure Cloud App Service and integrated with a GitHub Actions CI/CD workflow for automated build and deployment.
+The project also demonstrates **JWT Bearer authorization**, centralized exception handling, structured logging, configuration through the Options pattern, and automated deployment to **Azure App Service** with GitHub Actions.
 
 ---
 
-## Tech Stack
+## Request Flow
 
-**Core**  
-C# · .NET 10 · ASP.NET Core Web API
+```text
+Client
+  ↓
+JWT Bearer authorization
+  ↓
+WeatherController
+  ↓
+IExternalService
+  ↓
+ExternalService
+  ↓
+Typed HttpClient
+  ↓
+External Weather API
+  ↓
+ExternalWeatherResponse
+  ↓
+WeatherDto
+  ↓
+API response
+```
 
-**Integration & Data Handling**  
-HttpClient · JSON · DTO Mapping
+The weather endpoints are protected with `[Authorize]`.
 
-**Security & Infrastructure**  
-JWT Authentication · Authorization
-
-**Architecture & Practices**  
-Dependency Injection · Middleware · Logging · Options Pattern · Async/Await
-
-**Cloud & Deployment**  
-Azure Cloud App Service · GitHub Actions · CI/CD · Swagger / OpenAPI
-
----
-
-## Key Features
-
-- JWT-based authentication with token generation and secured endpoints
-- Protected API endpoints using `[Authorize]` and JWT validation
-- External API integration via HttpClient with configurable base URL and timeout
-- DTO-based transformation of external service responses into internal models
-- Structured logging using `ILogger` for request tracking and diagnostics
-- Global exception handling via custom middleware with consistent JSON responses
-- Input validation with clear error messaging for predictable API behavior
-- Separation of concerns between controllers, services, and data contracts
-- Live cloud deployment to Azure Cloud App Service with public Swagger endpoint
-- Automated CI/CD workflow using GitHub Actions for build and deployment
+Controllers validate incoming city values and delegate external communication to `IExternalService`, keeping HTTP integration logic outside the API controller.
 
 ---
 
-## Architecture Notes
+## External API Integration
 
-- Controller layer handles HTTP requests, validation, and response formatting
-- Service layer encapsulates external API communication and business logic
-- DTOs define boundaries between external responses and internal API contracts
-- Options pattern is used for strongly typed configuration (API settings, timeouts, keys)
-- Middleware centralizes exception handling and standardizes error responses
-- HttpClient is configured via dependency injection for reliability and reuse
-- Deployment pipeline is integrated with GitHub Actions and Azure Cloud App Service for automated cloud deployment
+External communication is implemented through `ExternalService` behind the `IExternalService` abstraction.
 
-This project reflects a gateway-style architecture, where the API acts as an intermediary between clients and external services.
+The typed `HttpClient` is registered through dependency injection and configured with:
+
+* external API base URL
+* configurable request timeout
+* settings bound through the Options pattern
+* asynchronous HTTP communication
+
+City values are URI-encoded before being included in external requests:
+
+```csharp
+var encodedCity = Uri.EscapeDataString(city);
+```
+
+External `HttpResponseMessage` instances are disposed after each request.
+
+Provider responses are deserialized into an integration-specific model and mapped into the API response DTO:
+
+```text
+External Weather API
+        ↓
+ExternalWeatherResponse
+        ↓
+WeatherDto
+        ↓
+Client
+```
+
+This prevents the complete external provider payload from becoming part of the public API contract.
 
 ---
 
-## What This Project Demonstrates
+## API Behavior
 
-- Designing a secure Web API with JWT authentication in ASP.NET Core
-- Integrating external services using HttpClient and configuration-based setup
-- Handling errors across service and middleware layers with consistent responses
-- Applying DTO mapping to decouple external and internal data models
-- Implementing structured logging for observability and debugging
-- Using dependency injection and options pattern for clean configuration management
-- Deploying ASP.NET Core Web APIs to Azure Cloud App Service
-- Implementing a CI/CD workflow with GitHub Actions
-- Understanding modern cloud-oriented backend deployment workflows
+For a successful request, the gateway returns a simplified weather response containing:
+
+```json
+{
+  "city": "City name",
+  "temperature": 20.5,
+  "description": "Weather description"
+}
+```
+
+The API distinguishes between client and upstream failures:
+
+* invalid or empty city input → `400 Bad Request`
+* city not found by the external provider → `404 Not Found`
+* other unsuccessful upstream responses → `502 Bad Gateway`
+
+This keeps external provider failures separate from failures originating inside the gateway itself.
 
 ---
 
-## How to Run (Local Setup)
+## Authentication & Authorization
+
+Weather endpoints use **JWT Bearer authentication** and are protected with:
+
+```csharp
+[Authorize]
+```
+
+JWT validation includes:
+
+* issuer validation
+* audience validation
+* token lifetime validation
+* signing-key validation
+
+The application intentionally does **not** implement a persistent user store or a complete login system.
+
+For local testing, a short-lived development token can be generated through:
+
+```text
+POST /api/auth/token
+```
+
+The token endpoint is available only in the **Development** environment.
+
+In Production / Azure App Service, development token generation is not exposed.
+
+---
+
+## Error Handling & Logging
+
+A custom exception-handling middleware centralizes unexpected failures and returns consistent JSON error responses.
+
+The application handles integration-related failures including external HTTP communication errors and request timeouts separately from other unhandled exceptions.
+
+Structured logging with `ILogger` records events such as:
+
+* incoming weather requests
+* input validation
+* external API calls
+* upstream HTTP status codes
+* response mapping
+* not-found results
+* external-service failures
+
+Parameterized log messages preserve structured values such as city names and HTTP status codes.
+
+---
+
+## Configuration & Secrets
+
+Non-sensitive configuration is stored in `appsettings.json`, including values such as:
+
+* external API base URL
+* request timeout
+* JWT issuer
+* JWT audience
+
+Sensitive configuration is kept outside source control:
+
+```text
+ExternalWeatherApi:ApiKey
+Jwt:Key
+```
+
+### Local Development
+
+The project uses **ASP.NET Core User Secrets** for local sensitive values.
+
+In Visual Studio:
+
+```text
+Right-click WeatherGatewayAPI
+→ Manage User Secrets
+```
+
+Example:
+
+```json
+{
+  "ExternalWeatherApi": {
+    "ApiKey": "your-local-api-key"
+  },
+  "Jwt": {
+    "Key": "your-strong-local-signing-key"
+  }
+}
+```
+
+Real API keys and signing keys should never be committed to the repository.
+
+### Azure App Service
+
+Production secrets are supplied through **Azure App Service environment variables / application settings**.
+
+For hierarchical ASP.NET Core configuration, Azure uses double underscores:
+
+```text
+ExternalWeatherApi__ApiKey
+Jwt__Key
+```
+
+This allows committed configuration files to remain free of deployment credentials.
+
+---
+
+## Running Locally
 
 ### Prerequisites
 
-- .NET SDK 10
-- Optional: Visual Studio 2022 or Rider
+* .NET 10 SDK
+* valid external weather API key
+* configured local JWT signing key
 
-### Steps
-
-Clone the repository:
+Restore dependencies:
 
 ```bash
-git clone https://github.com/alanracic/WeatherGatewayAPI.git
+dotnet restore
 ```
-
-Update configuration in `appsettings.json`:
-
-- Set external API base URL
-- Provide a valid API key
-- Configure JWT settings if needed
 
 Run the application:
 
 ```bash
-dotnet run
+dotnet run --project WeatherGatewayAPI/WeatherGatewayAPI.csproj
 ```
 
-Use Swagger / OpenAPI to test endpoints in the local development environment.
+In Development, Swagger / OpenAPI can be used to inspect the API and obtain a development JWT for testing protected endpoints.
 
 ---
 
-## Cloud Deployment
+## CI/CD & Azure Deployment
 
-The application is deployed to Azure Cloud App Service and publicly accessible through Swagger / OpenAPI.
-
-### Live Cloud Endpoint
+The application is deployed to **Azure App Service** through GitHub Actions.
 
 ```text
-https://weathergatewayapi-a8hqgeavazg6a5c3.italynorth-01.azurewebsites.net/swagger
+Push to master
+      ↓
+GitHub Actions
+      ↓
+Restore & Build
+      ↓
+dotnet publish
+      ↓
+Deployment artifact
+      ↓
+OIDC authentication
+      ↓
+Azure App Service
 ```
 
-### Deployment Workflow
+The workflow separates build and deployment responsibilities and:
 
-- Source control managed with GitHub
-- Automated build and deployment using GitHub Actions
-- Deployment target: Azure Cloud App Service
-- Public Swagger endpoint enabled for API testing and documentation
+* restores and builds the .NET application
+* publishes the application in Release configuration
+* transfers the publish output as a deployment artifact
+* authenticates to Azure using federated OIDC credentials
+* deploys the artifact to Azure App Service
 
----
+Azure authentication therefore does not require a deployment password to be stored in the repository.
 
-## Project Structure (High-Level)
+### Live Azure Deployment
 
-- Controllers — API endpoints (Auth, Weather)
-- Service — external service integration and business logic
-- Dtos — request/response data contracts
-- Middleware — global exception handling
-- Program.cs — application configuration and service wiring
+Swagger / OpenAPI documentation is available at:
 
----
+[WeatherGatewayAPI on Azure App Service](https://weathergatewayapi-a8hqgeavazg6a5c3.italynorth-01.azurewebsites.net/swagger)
 
-## Skills Demonstrated
-
-ASP.NET Core Web API · C# · .NET 10 · JWT Authentication · HttpClient · External API Integration · DTO Mapping · Middleware · Logging · Dependency Injection · Options Pattern · Async/Await · Azure Cloud App Service · GitHub Actions · CI/CD · Swagger / OpenAPI
+The production API remains protected by JWT authorization; the Development-only token endpoint is not exposed in Azure.
 
 ---
 
-## Project Status
+## Technology Stack
 
-Actively maintained as part of a professional .NET portfolio, demonstrating external service integration, secure API design, modern cloud deployment workflows, and clean backend architecture patterns aligned with modern ASP.NET Core development practices.
+**Backend**
+C# · .NET 10 · ASP.NET Core Web API · REST
+
+**Integration**
+Typed HttpClient · JSON · DTO Mapping · Options Pattern
+
+**Security**
+JWT Bearer Authentication · Authorization · User Secrets
+
+**Diagnostics**
+Structured Logging · Custom Exception Middleware
+
+**API Documentation**
+Swagger · OpenAPI
+
+**Cloud & Delivery**
+GitHub Actions · CI/CD · OIDC · Azure App Service
+
+---
+
+## Design Scope
+
+WeatherGatewayAPI is intentionally designed as a **focused external-service gateway**, rather than a complete identity or distributed integration platform.
+
+Key implementation choices include:
+
+* integration with one external weather provider;
+* typed `HttpClient` communication with a configurable timeout;
+* DTO mapping between external and internal contracts;
+* JWT-protected endpoints without a persistent user store;
+* Development-only token generation for local authorization testing;
+* centralized exception handling and structured logging;
+* automated Azure App Service deployment through GitHub Actions.
+
+A larger production integration platform could extend these areas with retry and circuit-breaker policies, caching, persistent identity, rate limiting, richer observability, integration testing, and multiple external providers.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
