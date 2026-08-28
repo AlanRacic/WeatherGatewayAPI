@@ -27,11 +27,13 @@ namespace WeatherGatewayAPI.Service
                 throw new InvalidOperationException("API key is missing from configuration.");
             }
 
-            var requestUrl = $"weather?city={city}&appid={_settings.ApiKey}";
+            var encodedCity = Uri.EscapeDataString(city);
+
+            var requestUrl = $"weather?city={encodedCity}&appid={_settings.ApiKey}";
 
             _logger.LogInformation("Calling external weather API for city: {City}", city);
 
-            var response = await _httpClient.GetAsync(requestUrl);
+            using var response = await _httpClient.GetAsync(requestUrl);
 
             _logger.LogInformation("External weather API responded with status code: {StatusCode} for city: {City}", (int)response.StatusCode, city);
 
@@ -57,8 +59,12 @@ namespace WeatherGatewayAPI.Service
 
             var content = await response.Content.ReadAsStringAsync();
 
-
-            var externalWeather = JsonSerializer.Deserialize<ExternalWeatherResponse>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var externalWeather = JsonSerializer.Deserialize<ExternalWeatherResponse>(
+                content,
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
 
             if (externalWeather == null)
             {
